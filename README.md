@@ -1,6 +1,6 @@
 # Side-stacker backend
 
-This is a Flask + SocketIO server that provide the backend for a side-stack game.
+This is a Flask + SocketIO server that provide the backend for a side-stacker game.
 
 Front end app can be found [here](https://github.com/ehupin/side-stacker-frontend).
 
