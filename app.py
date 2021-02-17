@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, session
 from flask_socketio import SocketIO, emit, join_room
-import uuid, pprint, random
+import uuid, pprint, random, enum
 import matrix_utils
 
 
@@ -8,8 +8,15 @@ app = Flask(__name__, template_folder='static')
 app.config['SECRET_KEY'] = 'thisIsSecret'
 socketio = SocketIO(app, cors_allowed_origins="*", async_handlers=True)
 
-ONE_PLAYER_MODE = 0
-TWO_PLAYERS_MODE = 1
+
+class GameMode(enum.Enum):
+    one_player = 0
+    two_players = 1
+
+class GameStatus(enum.Enum):
+    open = 0
+    started = 1
+    finished = 2
 
 class Player():
     def __init__(self, session_id=None):
@@ -21,13 +28,17 @@ class Game():
     def __init__(self):
         self.id = uuid.uuid4().hex
         self.players = []
+        self.status = GameStatus.open.value
         self.matrix = [[None]*self.matrix_size for i in range(self.matrix_size)]
 
     def add_player(self, player):
         self.players.append(player)
 
     def is_full(self):
-        return len(self.players) == self.max_players
+        is_full = len(self.players) == self.max_players
+        if is_full:
+            self.status = GameStatus.started.value
+        return is_full
 
     def add_piece(self, player, row_index, side):
         player_index = self.players.index(player)
@@ -50,6 +61,9 @@ class Game():
             if not game_is_won:
                 game_is_draw = not matrix_utils.matrix_has_value(self.matrix, None)
 
+        if game_is_won or game_is_draw:
+            self.status = GameStatus.finished.value
+
         # notify game players for new piece added
         emit('piece_added',
              dict(row=row_index,
@@ -66,7 +80,7 @@ class OnePlayerGame(Game):
 
     def add_piece(self, *args, auto_play=True, **kwargs):
         super(OnePlayerGame, self).add_piece( *args, **kwargs)
-        if auto_play:
+        if auto_play and self.status != GameStatus.finished.value:
             self.auto_play()
 
     def auto_play(self):
@@ -99,18 +113,19 @@ def on_join(data):
 
 
     # found or create a game to join if two players mode
-    if game_mode == TWO_PLAYERS_MODE:
+    if game_mode == GameMode.two_players.value:
         open_games = [g for g in TWO_PLAYERS_GAMES if not g.is_full()]
         if open_games:
             player_id = 1
             game = open_games[0]
 
     # if there is no open game (always true in one player mode)
+
     if not game:
         player_id = 0
-        if game_mode == ONE_PLAYER_MODE:
+        if game_mode == GameMode.one_player.value:
             game = OnePlayerGame()
-        elif game_mode == TWO_PLAYERS_MODE:
+        elif game_mode == GameMode.two_players.value:
             game = TwoPlayersGame()
             TWO_PLAYERS_GAMES.append(game)
 
