@@ -1,15 +1,18 @@
 from flask import Flask, render_template, request, session
 from flask_socketio import SocketIO, emit, join_room
-import uuid, pprint
+import uuid, pprint, random
 import matrix_utils
+
 
 app = Flask(__name__, template_folder='static')
 app.config['SECRET_KEY'] = 'thisIsSecret'
 socketio = SocketIO(app, cors_allowed_origins="*", async_handlers=True)
 
+ONE_PLAYER_MODE = 0
+TWO_PLAYERS_MODE = 1
 
 class Player():
-    def __init__(self, session_id):
+    def __init__(self, session_id=None):
         self.session_id = session_id
 
 class Game():
@@ -56,26 +59,60 @@ class Game():
                   game_is_draw=game_is_draw),
              room=self.id)
 
+class OnePlayerGame(Game):
+    def add_player(self, *args, **kwargs):
+        super(OnePlayerGame, self).add_player(*args,)
+        super(OnePlayerGame, self).add_player(Player())
 
-GAMES = []
+    def add_piece(self, *args, auto_play=True, **kwargs):
+        super(OnePlayerGame, self).add_piece( *args, **kwargs)
+        if auto_play:
+            self.auto_play()
+
+    def auto_play(self):
+        """ Basic auto play, add coin to the first available row on the left side
+        """
+        row_indexes = list(range(len(self.matrix)))
+        random.shuffle(row_indexes)
+        for row_index in row_indexes:
+            if None in self.matrix[row_index]:
+                side = random.randint(0, 1)
+                self.add_piece(self.players[1], row_index, side, auto_play=False)
+                return
+
+class TwoPlayersGame(Game):
+    pass
+
+TWO_PLAYERS_GAMES = []
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@socketio.on('connect')
-def on_connection():
+
+@socketio.on('join')
+def on_join(data):
     player = Player(request.sid)
 
-    # found or create a game to join
-    open_games = [g for g in GAMES if not g.is_full()]
-    if open_games:
-        player_id = 1
-        game = open_games[0]
-    else:
+    game = None
+    game_mode = data['gameMode']
+
+
+    # found or create a game to join if two players mode
+    if game_mode == TWO_PLAYERS_MODE:
+        open_games = [g for g in TWO_PLAYERS_GAMES if not g.is_full()]
+        if open_games:
+            player_id = 1
+            game = open_games[0]
+
+    # if there is no open game (always true in one player mode)
+    if not game:
         player_id = 0
-        game = Game()
-        GAMES.append(game)
+        if game_mode == ONE_PLAYER_MODE:
+            game = OnePlayerGame()
+        elif game_mode == TWO_PLAYERS_MODE:
+            game = TwoPlayersGame()
+            TWO_PLAYERS_GAMES.append(game)
 
     # add player to game
     game.add_player(player)
