@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, session
 from flask_socketio import SocketIO, emit, join_room
-import uuid, pprint, random, enum
+import uuid, pprint, enum
 import matrix_utils
 
 
@@ -86,13 +86,9 @@ class OnePlayerGame(Game):
     def auto_play(self):
         """ Basic auto play, add coin to the first available row on the left side
         """
-        row_indexes = list(range(len(self.matrix)))
-        random.shuffle(row_indexes)
-        for row_index in row_indexes:
-            if None in self.matrix[row_index]:
-                side = random.randint(0, 1)
-                self.add_piece(self.players[1], row_index, side, auto_play=False)
-                return
+        row_index, side = matrix_utils.compute_move(self.matrix, 1)
+        self.add_piece(self.players[1], row_index, side, auto_play=False)
+
 
 class TwoPlayersGame(Game):
     pass
