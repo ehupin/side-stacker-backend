@@ -1,7 +1,7 @@
 import matrix_utils
 import pytest
 import pprint
-@pytest.mark.skip()
+
 def test_get_series_in_list():
     series = [0, 0, 0, 1, 1, 0, 0]
     series_indexes = matrix_utils.get_series_indexes_in_list(series, 1)
@@ -34,7 +34,7 @@ def test_get_series_in_list():
     assert series_indexes[0][0] == 4
     assert series_indexes[0][1] == 6
 
-@pytest.mark.skip()
+
 def test_get_longest_series_neighbor_empty_index_in_list():
     index = matrix_utils.get_longest_series_neighbor_empty_index_in_list([0, 0, 0, 1, 1, 0, 0], 1, 2, neighbor_value=0)
     assert index == 2
@@ -44,22 +44,6 @@ def test_get_longest_series_neighbor_empty_index_in_list():
 
 
 def test_blocking_compute_move():
-
-
-    tested_matrix = [
-        [0, 0, 0, None, None, None, None],
-        [None, None, None, None, None, None, None],
-        [None, None, None, None, None, None, None],
-        [1, None, None, None, None, None, None],
-        [None, None, None, None, None, None, 1],
-        [None, None, None, None, None, None, None],
-        [None, None, None, None, None, None, None]]
-
-    row, side = matrix_utils.compute_move(tested_matrix, 1)
-    assert row == 0
-    assert side == 0
-    return
-
     tested_matrix = [
         [0, 0, 0, None, None, None, None],
         [None, None, None, None, None, None, None],
